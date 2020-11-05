@@ -1,0 +1,14 @@
+4
+FFF305 Estocolmo 12:36
+6
+DEF321 Berlim 09:37
+2
+XYZ001 Nice 23:38
+1
+AQT123 Istambul 05:39
+2
+XYZ001 Nice 08:40
+4
+FFF305 Estocolmo 21:41
+1
+AQT123 Istambul 19:42

@@ -1,0 +1,14 @@
+6
+DEF321 Berlim 07:42
+7
+GHI456 Londres 01:43
+3
+ABC789 Moscou 15:44
+4
+FFF305 Estocolmo 02:45
+3
+ABC789 Moscou 01:46
+2
+XYZ001 Nice 14:47
+2
+XYZ001 Nice 15:48
