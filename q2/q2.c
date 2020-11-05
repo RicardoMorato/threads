@@ -26,7 +26,7 @@ char *cores[L] = {"\033[48;2;255;0;0",
                   "\033[48;2;0;186;186"};
 char* preto = ";30m"; char* branco = "m";
 
-pthread_mutex_t mutex_linhas[L], mutex_tabela;
+pthread_mutex_t mutex_linhas[L], mutex_cursor = PTHREAD_MUTEX_INITIALIZER;
 int ids[T];
 
 void inicia_tabela() {
@@ -75,14 +75,61 @@ void muda_linha(int l, char codigo[], char cidade[], char hora[]) {
     }
 }
 
-int main() {
-    inicia_tabela();
-    limpa_linha(0);
-    muda_linha(0, "123456", "Recife", "12:37");
-    printf("%s%s%s\n", cores[0], preto, tabela[0]);
-    system("sleep 2");
-    printf("\033[6B");
-    return 0;
+void *atualiza_tabela(void* tid){
+    FILE* arq;
+    char codigo[11], cidade[11], hora[6];
+    int result, l, i;
+    int *id = (int*) tid;
+    for(i=*id; i< N; i+= T) {
+        arq = fopen(arquivos[i], "rt");
+        if(arq == NULL) {
+            fprintf(stderr, "Falha ao abrir arquivo!\n");
+            exit(-1);
+        }
+        while(!feof(arq)) {
+                result = fscanf(arq, "%d %s %s %s", &l, codigo, cidade, hora);
+                pthread_mutex_lock(&mutex_linhas[l-1]);
+                if(result != EOF) {
+                    limpa_linha(l-1);
+                    muda_linha(l-1, codigo, cidade, hora);
+                    pthread_mutex_lock(&mutex_cursor);
+                    if(l!=1){
+                        printf("\033[%dB", l-1);
+                    }
+                    if(l==6) {
+                        printf("%s%s%s\033[m\n", cores[l-1], branco, tabela[l-1]);
+                    }
+                    else {
+                        printf("%s%s%s\033[m\n", cores[l-1], preto, tabela[l-1]);
+                    }
+                    printf("\033[%dA", l);
+                    pthread_mutex_unlock(&mutex_cursor);
+                    system("sleep 2");
+                }
+                pthread_mutex_unlock(&mutex_linhas[l-1]);
+        }
+        fclose(arq);
+    }
+    pthread_exit(NULL);
 }
 
-
+int main() {
+    pthread_t threads[T];
+    int i;
+    inicia_tabela();
+    for(i =0; i<L; i++) {
+        pthread_mutex_init(&mutex_linhas[i], NULL);
+    }
+    for(i=0; i<T; i++) {
+        ids[i] = i;
+        pthread_create(&threads[i], NULL, atualiza_tabela, (void *) &ids[i]);
+    }
+    for(i=0; i<T; i++) {
+        pthread_join(threads[i], NULL);
+    }
+    for(i =0; i<L; i++) {
+        pthread_mutex_destroy(&mutex_linhas[i]);
+    }
+    printf("\033[7B\n");
+    pthread_exit(NULL);
+}
