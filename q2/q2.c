@@ -29,7 +29,29 @@ char* preto = ";30m"; char* branco = "m";
 pthread_mutex_t mutex_linhas[L], mutex_tabela;
 int ids[T];
 
+void inicia_tabela() {
+    int i, j;
+    for(i=0;i<L; i++) {
+        for(j=0; j<TAM_L; j++) {
+            tabela[i][j] = ' ';
+        }
+        tabela[i][j] = '\0';
+    }
+    system("clear");
+    for(int i=0; i<L; i++) {
+        if(i == L-2) {   
+            printf("%s%s%s\033[m\n", cores[i], branco, tabela[i]);
+        }
+        else {
+            printf("%s%s%s\033[m\n", cores[i], preto, tabela[i]);
+        }
+    }
+    printf("\033[7A");
+    system("sleep 2");
+}
+
 int main() {
+    inicia_tabela();
     return 0;
 }
 
