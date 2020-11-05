@@ -50,8 +50,38 @@ void inicia_tabela() {
     system("sleep 2");
 }
 
+void limpa_linha(int l) {
+    int i;
+    for(i=0; i<TAM_L; i++) {
+        tabela[l][i] = ' ';
+    }
+}
+
+void muda_linha(int l, char codigo[], char cidade[], char hora[]) {
+    int i, j=0;
+    for(i=0; codigo[i] != '\0'; i++) {
+        tabela[l][j] = codigo[i];
+        j++;
+    }
+    j++;
+    for(i=0; cidade[i] != '\0'; i++) {
+        tabela[l][j] = cidade[i];
+        j++;
+    }
+    j = TAM_L-5;
+    for(i=0; hora[i]!='\0'; i++) {
+        tabela[l][j] = hora[i];
+        j++;
+    }
+}
+
 int main() {
     inicia_tabela();
+    limpa_linha(0);
+    muda_linha(0, "123456", "Recife", "12:37");
+    printf("%s%s%s\n", cores[0], preto, tabela[0]);
+    system("sleep 2");
+    printf("\033[6B");
     return 0;
 }
 
