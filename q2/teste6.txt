@@ -1,0 +1,14 @@
+2
+XYZ001 Nice 19:30
+2
+XYZ001 Nice 04:31
+1
+AQT123 Istambul 06:32
+4
+FFF305 Estocolmo 06:33
+7
+GHI456 Londres 19:34
+3
+ABC789 Moscou 06:35
+5
+QRS111 Madri 22:36

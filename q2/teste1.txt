@@ -1,0 +1,14 @@
+4
+FFF305 Estocolmo 09:00
+7
+GHI456 Londres 11:01
+3
+ABC789 Moscou 22:02
+4
+FFF305 Estocolmo 02:03
+4
+FFF305 Estocolmo 09:04
+5
+QRS111 Madri 14:05
+4
+FFF305 Estocolmo 03:06

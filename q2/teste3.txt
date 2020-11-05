@@ -1,0 +1,14 @@
+7
+GHI456 Londres 21:12
+4
+FFF305 Estocolmo 04:13
+3
+ABC789 Moscou 13:14
+5
+QRS111 Madri 19:15
+1
+AQT123 Istambul 04:16
+6
+DEF321 Berlim 03:17
+3
+ABC789 Moscou 22:18
