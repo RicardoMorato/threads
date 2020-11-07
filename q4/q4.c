@@ -11,7 +11,7 @@
   a fim de evitar que duas ou mais threads tenham acesso a uma região crítica (os buffers).
 */
 
-#define N 2 // Número de processadores/núcleos do sistema, portanto, também representa a quantidade de threads do programa
+#define N 5 // Número de processadores/núcleos do sistema, portanto, também representa a quantidade de threads do programa
 #define BUFFER_SIZE 10 // Tamanho máximo do Buffer
 
 typedef struct param { // Struct pedida pela questão que irá servir como parâmetro de uma função em uma execução
@@ -45,6 +45,20 @@ int statusThreads[N];
 
 int *idResultados;
 
+// Utilizaremos essas cores para printar as respostas das execuções
+char *cores[3] = {
+  "\033[48;2;255;0;0", // Vermelho
+  "\033[48;2;255;255;0", // Amarelo
+  "\033[48;2;0;255;0", // Verde
+};
+char *preto = ";30m";
+char *branco = "m";
+char *frases[3] = {
+  " ",
+  "funexecMod10 acabou de lançar um novo resultado no nosso sistema!\n",
+  "O resultado de ",
+};
+
 
 // Início das funções
 int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função pedida pela questão, aqui colocamos uma nova execução (tarefa) no buffer de execuções e retornamos o ID dessa execução
@@ -54,7 +68,8 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
 
   pthread_mutex_lock(&mutexBufferExecucao); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
 
-  printf("\e[0;101m Agendando requisicao %d...\e[0m\n", qtdExecucoes);
+  // printf("%s%d...\033[m\n", cores[0], qtdExecucoes);
+  printf("%s%s Por favor, aguarde um instante enquanto agendamos a execução %d no buffer.\033[m\n", cores[0], branco, qtdExecucoes);
   request.funcParams.execucaoId = qtdExecucoes;
   bufferExecucao[qtdExecucoes] = request;
 
@@ -72,15 +87,13 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
 int pegarResultadoExecucao(int execucaoId) { // Segunda função pedida pela questão, aqui checamos se há algum resultado de execuções no buffer de resultados, se sim, retornamos esse resultado, se não, adormecemos as threads até termos um resultado
   int result;
 
-  printf("Chegou dentro da função de resultados!\n");
   pthread_mutex_lock(&mutexBufferResult); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
 
-  printf("Mutex de resultados travado!\n");
   while(statusBufferResult == 0 || bufferResult[execucaoId] < 0) { // Enquanto o buffer estiver vazio ou então o resultado dessa execução em específico não estiver disponível, esperamos
     pthread_cond_wait(&condResult, &mutexBufferResult);
   }
 
-  printf("\e[44m Pegando o resultado do id %d...\e[0m\n", execucaoId);
+  printf("%s%s Por favor, aguarde um instante enquanto coletamos o resultado da execução %d.\033[m\n", cores[1], preto, execucaoId);
   result = bufferResult[execucaoId];
   bufferResult[execucaoId] = 0;
   statusBufferResult--;
@@ -102,7 +115,6 @@ void *funexecAddMod10(void* params) {
   pthread_mutex_unlock(&mutexBufferResult);
 
   statusThreads[aux->threadId] = -1;
-  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", aux->threadId);
   pthread_exit(NULL);
 }
 
@@ -121,10 +133,9 @@ void *funcThreadDespachante() { // Esta função será chamada quando a thread d
         bufferExecucao[execucaoDaVez].funcParams.threadId = i;
         pthread_create(&threads[i], NULL, bufferExecucao[execucaoDaVez].genericFunc, (void *) &bufferExecucao[execucaoDaVez].funcParams);
       }
-
-      printf("Despachou %d\n", execucaoDaVez);
       bufferExecucao[execucaoDaVez].genericFunc = NULL;
 
+      printf("A thread despachante acabou de despachar a execucao: %d\n", execucaoDaVez);
       if (execucaoDaVez == BUFFER_SIZE) execucaoDaVez = 0; // Assim como em um array circular, aqui voltamos a checar o início do buffer de execuções
       if (statusBufferExecucoes == 0) break;
       statusBufferExecucoes--;
@@ -137,7 +148,6 @@ void *funcThreadDespachante() { // Esta função será chamada quando a thread d
   }
 
   pthread_mutex_unlock(&mutexBufferExecucao);
-  printf("Fim da espera por requisicao.\n");
   pthread_exit(NULL);
 }
 
@@ -155,17 +165,36 @@ int main(int argc, char *argv[]) {
   pthread_t despachante; // Thread pedida pela questão, ela irá pegar as requisições do buffer e gerenciar as N threads para saber qual vai ficar responsável por cada requisição
   pthread_create(&despachante, NULL, funcThreadDespachante, NULL);
 
-  for(int i = 0; i < BUFFER_SIZE; i++) {
-    aux.a = 10;
-    aux.b = 20;
-    aux.c = 47;
+  for(i = 0; i < BUFFER_SIZE; i++) {
+    // Essa série de IF's abaixo são apenas para diversificar mais os resultados encontrados
+    if (i == 1) {
+      aux.a = 1;
+      aux.b = 2;
+      aux.c = 3;
+    } else if (i == 2) {
+      aux.a = 1;
+      aux.b = 2;
+      aux.c = 3;
+    } else if (i % 3 == 0) {
+      aux.a = 3;
+      aux.b = 6;
+      aux.c = 9;
+    } else if (i == 9) {
+      aux.a = 9;
+      aux.b = 8;
+      aux.c = 7;
+    } else {
+      aux.a = 94;
+      aux.b = 88;
+      aux.c = 75;
+    }
+
     idResultados[i] = agendarExecucao((void *) funexecAddMod10, aux);
   }
 
   for(int i = 0; i < BUFFER_SIZE; i++) {
-    printf("Chegou para pegar o resultado!\n");
     result = pegarResultadoExecucao(idResultados[i]);
-    printf("\e[0;105m Resultado de %d: %d \e[0m\n", idResultados[i], result);
+    printf("%s%s Veja, conseguimos o resultado da execução %d: %d.\033[m\n", cores[2], preto, idResultados[i], result);
   }
 
   for(i = 0; i < N; i++) pthread_join(threads[i], NULL);
