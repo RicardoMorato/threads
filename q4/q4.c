@@ -61,6 +61,24 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
   return request.execucaoId;
 }
 
+int pegarResultadoExecucao(int execucaoId) {
+  int result;
+
+  pthread_mutex_lock(&mutexBufferResult); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
+
+  while(statusBufferResult == 0 || bufferResult[execucaoId] < 0) { // Enquanto o buffer estiver vazio ou então o resultado dessa execução em específico não estiver disponível, esperamos
+    pthread_cond_wait(&condResult, &mutexBufferResult);
+  }
+
+  printf("\e[44m Pegando o resultado do id %d...\e[0m\n", execucaoId);
+  result = bufferResult[execucaoId];
+  bufferResult[execucaoId] = 0;
+  statusBufferResult--;
+
+  pthread_mutex_unlock(&mutexBufferResult);
+  return result;
+}
+
 
 int main(int argc, char *argv[]) {
   pthread_t threads[N];
