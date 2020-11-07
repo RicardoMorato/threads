@@ -16,12 +16,12 @@
 
 typedef struct param { // Struct pedida pela questão que irá servir como parâmetro de uma função em uma execução
   int a, b, c;
+  int execucaoId; // ID da execução a qual esse parâmetro está vinculado (será utilizado para colocar o resultado das funções no buffer de resultados)
 } Param;
 
 typedef struct execucao { // Para cada execução agendada na função agendarExecucao, será criada uma instância desta Struct
   void *genericFunc;
   Param funcParams;
-  int execucaoId;
   int threadId;
 } Execucao;
 
@@ -38,6 +38,7 @@ int *bufferResult;
 int statusBufferResult = 0; // Tamanho atual do buffer de resultados
 
 int qtdExecucoes = 0; // Irá funcionar como o ID das execuções, além disso, usaremos essa variável para comparar com o tamanho máximo do buffer e conferir se chegamos no limite
+int statusThreads[N];
 
 int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função pedida pela questão, aqui colocamos uma nova execução (tarefa) no buffer de execuções e retornamos o ID dessa execução
   Execucao request;
@@ -47,7 +48,7 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
   pthread_mutex_lock(&mutexBufferExecucao); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
 
   printf("\e[0;101m Agendando requisicao %d...\e[0m\n", qtdExecucoes);
-  request.execucaoId = qtdExecucoes;
+  request.funcParams.execucaoId = qtdExecucoes;
   bufferExecucao[qtdExecucoes] = request;
 
   if(qtdExecucoes == BUFFER_SIZE) qtdExecucoes = 0; // O buffer funciona de forma parecida a um array circular, portanto, caso cheguemos ao seu final, devemos retornar ao início
@@ -58,10 +59,10 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
   if(statusBufferExecucoes == 1) pthread_cond_broadcast(&condExecucao); // Aqui conferimos novamente para atestar que as condições não foram atingidas após o incremento das variáveis
 
   pthread_mutex_unlock(&mutexBufferExecucao);
-  return request.execucaoId;
+  return request.funcParams.execucaoId;
 }
 
-int pegarResultadoExecucao(int execucaoId) {
+int pegarResultadoExecucao(int execucaoId) { // Segunda função pedida pela questão, aqui checamos se há algum resultado de execuções no buffer de resultados, se sim, retornamos esse resultado, se não, adormecemos as threads até termos um resultado
   int result;
 
   pthread_mutex_lock(&mutexBufferResult); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
@@ -79,9 +80,28 @@ int pegarResultadoExecucao(int execucaoId) {
   return result;
 }
 
+void *funexecAddMod10(Param params) {
+  int result = (params.a + params.b + params.c) % 10;
+
+  pthread_mutex_lock(&mutexBufferResult);
+
+  bufferResult[params.execucaoId] = result;
+  statusBufferResult++;
+
+  pthread_cond_signal(&condResult); // Avisa às threads que um resultado foi adicionado ao buffer de resultados
+  pthread_mutex_unlock(&mutexBufferResult);
+
+  statusThreads[params.execucaoId] = -1;
+  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", params.execucaoId);
+  pthread_exit(NULL);
+}
+
 
 int main(int argc, char *argv[]) {
+  int i;
   pthread_t threads[N];
+
+  for(i = 0; i < N; i++) statusThreads[i] = -1; // Iniciando todas as threads com o status -1 para indicar que elas não estão ocupadas, portanto pode receber outra funexec
 
   pthread_exit(NULL);
   return 0;
