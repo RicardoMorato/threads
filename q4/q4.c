@@ -43,7 +43,10 @@ int execucaoDaVez = 0;
 pthread_t threads[N];
 int statusThreads[N];
 
+int *idResultados;
 
+
+// Início das funções
 int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função pedida pela questão, aqui colocamos uma nova execução (tarefa) no buffer de execuções e retornamos o ID dessa execução
   Execucao request;
   request.funcParams = funcParams;
@@ -136,10 +139,38 @@ void *funcThreadDespachante() { // Esta função será chamada quando a thread d
 }
 
 int main(int argc, char *argv[]) {
-  int i;
+  int i, result;
+  Param aux;
 
+  bufferExecucao = (Execucao *) malloc(BUFFER_SIZE * sizeof(Execucao));
+  bufferResult = (int *) malloc(BUFFER_SIZE * sizeof(int));
+  idResultados = (int *) malloc(BUFFER_SIZE * sizeof(int));
+
+  for(i = 0; i < BUFFER_SIZE; i++) bufferResult[i] = -1; // Iniciando todos os resultados do buffer de resultados como -1 para que saibamos que ainda não temos um resultado válido nesta posição
   for(i = 0; i < N; i++) statusThreads[i] = -1; // Iniciando todas as threads com o status -1 para indicar que elas não estão ocupadas, portanto pode receber outra funexec
 
+  pthread_t despachante; // Thread pedida pela questão, ela irá pegar as requisições do buffer e gerenciar as N threads para saber qual vai ficar responsável por cada requisição
+  pthread_create(&despachante, NULL, funcThreadDespachante, NULL);
+
+  for(int i = 0; i < BUFFER_SIZE; i++) {
+    aux.a = 10;
+    aux.b = 20;
+    aux.c = 47;
+    idResultados[i] = agendarExecucao((void *) funexecAddMod10, aux);
+  }
+
+  for(int i = 0; i < BUFFER_SIZE; i++) {
+    result = pegarResultadoExecucao(idResultados[i]);
+    printf("\e[0;105m Resultado de %d: %d \e[0m\n", idResultados[i], result);
+  }
+
+  for(i = 0; i < N; i++) pthread_join(threads[i], NULL);
+
+  pthread_join(despachante, NULL);
+  printf("Fim do programa.\n");
+
+  free(bufferExecucao);
+  free(bufferResult);
   pthread_exit(NULL);
   return 0;
 }
