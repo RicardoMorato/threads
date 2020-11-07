@@ -11,7 +11,7 @@
   a fim de evitar que duas ou mais threads tenham acesso a uma região crítica (os buffers).
 */
 
-#define N 5 // Número de processadores/núcleos do sistema, portanto, também representa a quantidade de threads do programa
+#define N 2 // Número de processadores/núcleos do sistema, portanto, também representa a quantidade de threads do programa
 #define BUFFER_SIZE 10 // Tamanho máximo do Buffer
 
 typedef struct param { // Struct pedida pela questão que irá servir como parâmetro de uma função em uma execução
@@ -72,8 +72,10 @@ int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função ped
 int pegarResultadoExecucao(int execucaoId) { // Segunda função pedida pela questão, aqui checamos se há algum resultado de execuções no buffer de resultados, se sim, retornamos esse resultado, se não, adormecemos as threads até termos um resultado
   int result;
 
+  printf("Chegou dentro da função de resultados!\n");
   pthread_mutex_lock(&mutexBufferResult); // Travando o mutex para que outras threads não tenham acesso ao recurso compartilhado (buffer e variáveis globais) enquanto mexemos nele
 
+  printf("Mutex de resultados travado!\n");
   while(statusBufferResult == 0 || bufferResult[execucaoId] < 0) { // Enquanto o buffer estiver vazio ou então o resultado dessa execução em específico não estiver disponível, esperamos
     pthread_cond_wait(&condResult, &mutexBufferResult);
   }
@@ -87,19 +89,20 @@ int pegarResultadoExecucao(int execucaoId) { // Segunda função pedida pela que
   return result;
 }
 
-void *funexecAddMod10(Param params) {
-  int result = (params.a + params.b + params.c) % 10;
+void *funexecAddMod10(void* params) {
+  Param *aux = (Param *) params;
+  int result = (aux->a + aux->b + aux->c) % 10;
 
   pthread_mutex_lock(&mutexBufferResult);
 
-  bufferResult[params.execucaoId] = result;
+  bufferResult[aux->execucaoId] = result;
   statusBufferResult++;
 
   pthread_cond_signal(&condResult); // Avisa às threads que um resultado foi adicionado ao buffer de resultados
   pthread_mutex_unlock(&mutexBufferResult);
 
-  statusThreads[params.threadId] = -1;
-  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", params.threadId);
+  statusThreads[aux->threadId] = -1;
+  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", aux->threadId);
   pthread_exit(NULL);
 }
 
@@ -160,6 +163,7 @@ int main(int argc, char *argv[]) {
   }
 
   for(int i = 0; i < BUFFER_SIZE; i++) {
+    printf("Chegou para pegar o resultado!\n");
     result = pegarResultadoExecucao(idResultados[i]);
     printf("\e[0;105m Resultado de %d: %d \e[0m\n", idResultados[i], result);
   }
