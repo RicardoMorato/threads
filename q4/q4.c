@@ -17,12 +17,12 @@
 typedef struct param { // Struct pedida pela questão que irá servir como parâmetro de uma função em uma execução
   int a, b, c;
   int execucaoId; // ID da execução a qual esse parâmetro está vinculado (será utilizado para colocar o resultado das funções no buffer de resultados)
+  int threadId;
 } Param;
 
 typedef struct execucao { // Para cada execução agendada na função agendarExecucao, será criada uma instância desta Struct
   void *genericFunc;
   Param funcParams;
-  int threadId;
 } Execucao;
 
 // Inicialização dos Mutexes e suas variáveis de condição.
@@ -38,7 +38,11 @@ int *bufferResult;
 int statusBufferResult = 0; // Tamanho atual do buffer de resultados
 
 int qtdExecucoes = 0; // Irá funcionar como o ID das execuções, além disso, usaremos essa variável para comparar com o tamanho máximo do buffer e conferir se chegamos no limite
+int execucaoDaVez = 0;
+
+pthread_t threads[N];
 int statusThreads[N];
+
 
 int agendarExecucao(void *funexec, Param funcParams) {  // Primeira função pedida pela questão, aqui colocamos uma nova execução (tarefa) no buffer de execuções e retornamos o ID dessa execução
   Execucao request;
@@ -91,15 +95,48 @@ void *funexecAddMod10(Param params) {
   pthread_cond_signal(&condResult); // Avisa às threads que um resultado foi adicionado ao buffer de resultados
   pthread_mutex_unlock(&mutexBufferResult);
 
-  statusThreads[params.execucaoId] = -1;
-  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", params.execucaoId);
+  statusThreads[params.threadId] = -1;
+  printf("funexecAddMod10 emitiu novo resultado, thread %d está livre.\n", params.threadId);
   pthread_exit(NULL);
 }
 
+void *funcThreadDespachante() { // Esta função será chamada quando a thread despachante for criada
+  int i;
+  pthread_mutex_lock(&mutexBufferExecucao);
+
+  while(statusBufferExecucoes == 0) { // Aqui sinalizamos às threads do buffer de execução que ainda não existe nenhuma execução pendente, fazemos algo parecido na sexta questão, com o put da fila bloqueante
+    pthread_cond_wait(&condExecucao, &mutexBufferExecucao);
+  }
+
+  while(statusBufferExecucoes > 0) { // Aqui rodamos um laço de repetição que só irá terminar quando não houver mais nenhuma execução pendente no buffer
+    for(i = 0; i < N && bufferExecucao[execucaoDaVez].genericFunc != NULL; i++) {
+      if(statusThreads[i] == -1) {
+        statusThreads[i] = 1;
+        bufferExecucao[execucaoDaVez].funcParams.threadId = i;
+        pthread_create(&threads[i], NULL, bufferExecucao[execucaoDaVez].genericFunc, (void *) &bufferExecucao[execucaoDaVez].funcParams);
+      }
+
+      printf("Despachou %d\n", execucaoDaVez);
+      bufferExecucao[execucaoDaVez].genericFunc = NULL;
+
+      if (execucaoDaVez == BUFFER_SIZE) execucaoDaVez = 0; // Assim como em um array circular, aqui voltamos a checar o início do buffer de execuções
+      if (statusBufferExecucoes == 0) break;
+      statusBufferExecucoes--;
+      execucaoDaVez++;
+      if (execucaoDaVez == BUFFER_SIZE) execucaoDaVez = 0; // Aqui checamos novamente para garantir que as condições não foram atingidas desde o último incremento
+      if (statusBufferExecucoes == 0) break;
+    }
+
+    if (statusBufferExecucoes == 0) pthread_cond_wait(&condExecucao, &mutexBufferExecucao);
+  }
+
+  pthread_mutex_unlock(&mutexBufferExecucao);
+  printf("Fim da espera por requisicao.\n");
+  pthread_exit(NULL);
+}
 
 int main(int argc, char *argv[]) {
   int i;
-  pthread_t threads[N];
 
   for(i = 0; i < N; i++) statusThreads[i] = -1; // Iniciando todas as threads com o status -1 para indicar que elas não estão ocupadas, portanto pode receber outra funexec
 
