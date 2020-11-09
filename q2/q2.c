@@ -3,6 +3,16 @@
 #include <pthread.h>
 #include <time.h>
 
+//L o número de linhas, TAM_L a largura das linhas
+//N o número de arquivos
+//T o número de threads
+
+/*         Acrescentar linhas    */
+//Mude o valor L e coloque as cores desejadas no vetor cores
+
+/*       Acrescentar arquivos        */
+//Mude o valor de N e coloque os arquivos desejados no vetor arquivos
+// O NOME DAS CIDADES NÃO DEVEM CONTER ESPAÇOS
 #define L 7
 #define TAM_L 26
 #define N 8
